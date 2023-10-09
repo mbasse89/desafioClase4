@@ -82,21 +82,22 @@ class ProductManager {
         }
     }
     
-
     async createId() {
         try {
-            if (await fs.access(this.path).catch(() => false)) {
-                const db = JSON.parse(await fs.readFile(this.path, "utf-8"));
-                const id = db.length + 1;
-                return id;
-            } else {
+            const db = await fs.readFile(this.path, "utf-8");
+            const id = JSON.parse(db).length + 1;
+            return id;
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                // Si el archivo no existe, se asume que es el primer producto
                 return 1;
             }
-        } catch (error) {
             console.error("Id error: " + error.message);
             return;
         }
     }
+
+    
 
     async addProduct(title, description, price, thumbnail, code, stock) {
         const product = {
@@ -145,29 +146,25 @@ class ProductManager {
 
     async updateProduct(id, keyToUpdate, newValue) {
         try {
-            const productToUpdate = await this.getProductsById(id);
-            if (productToUpdate) {
-                const productKeys = Object.keys(productToUpdate);
-                const checkKey = productKeys.includes(keyToUpdate);
-
-                if (checkKey) {
-                    const db = JSON.parse(await fs.readFile(this.path, "utf-8"));
-                    productToUpdate[keyToUpdate] = newValue;
-                    const index = db.findIndex((p) => p.id === id);
-                    db[index] = productToUpdate;
+            const db = await this.readDB();
+            const index = db.findIndex((p) => p.id === id);
+    
+            if (index !== -1) {
+                if (keyToUpdate in db[index]) {
+                    db[index][keyToUpdate] = newValue;
                     await fs.writeFile(this.path, JSON.stringify(db, null, '\t'));
-
-                    console.log(JSON.parse(await fs.readFile(this.path, "utf-8")));
+                    console.log(JSON.parse(await fs.readFile(this.path, 'utf-8')));
                 } else {
-                    console.error("Key errornea");
+                    console.error('La clave es incorrecta');
                 }
             } else {
-                console.error("Error en  Id");
+                console.error('ID incorrecto');
             }
         } catch (error) {
-            console.error("Error: " + error.message);
+            console.error('Error: ' + error.message);
         }
     }
+    
 }
 
 const productManager = new ProductManager("./db.json");
@@ -177,9 +174,9 @@ const productManager = new ProductManager("./db.json");
     // productManager.addProduct("Producto Prueba", "Este es un producto prueba", 200, "Sin imagen", "abc123", 25);
 // productManager.getProducts();
 // productManager.getProductsById(1);
-productManager.getProductsById(1).then(products => {
-        console.log(products)})
-// productManager.updateProduct(1, "price", "1597777");
+// productManager.getProductsById(1).then(products => {
+//         console.log(products)})
+productManager.updateProduct(1, "price", "15933");
 // productManager.getProducts();
 
 // productManager.deleteProduct(1);
